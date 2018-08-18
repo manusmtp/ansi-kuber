@@ -1,0 +1,56 @@
+---
+- name : configuring the master server
+  hosts: master
+  vars:
+    masterip: "192.168.0.105" 
+  tasks:
+    - name: create the repo 
+      yum_repository: 
+        name: virt7-docker-common-release
+        description: virt7-docker-common-release
+        file: virt7-docker-common-release
+        baseurl: http://cbs.centos.org/repos/virt7-docker-common-release/x86_64/os/
+        gpgcheck: no
+
+    - name: install the required packages
+      yum:  
+         name: "{{ item }}" 
+         state: present
+      with_items:
+        - ntp
+        - etcd
+        - kubernetes
+        - docker 
+
+    - name: creating kubernetes configuration file
+      template:                                             #creating kubernetes config
+        src: mytemplates/master-kuber.j2
+        dest: /etc/kubernetes/config
+        owner: root
+
+    - name: creating etcd config file                       #creating the etcd config file 
+      template: 
+        src: mytemplates/mster-etcd.j2
+        dest: /etc/etcd/etcd.conf
+        owner: root
+
+    - name: creating the apiserver 
+      template:
+        src: mytemplates/apiserver.j2
+        dest: /etc/kubernetes/apiserver
+        owner: root    
+
+    - name: start the services in master
+      service: 
+         name: "{{ item }}" 
+         state: started
+      with_items:
+        - ntpd
+        - etcd
+        - kube-controller-manager
+        - kube-scheduler 
+        - kube-apiserver 
+
+
+
+      

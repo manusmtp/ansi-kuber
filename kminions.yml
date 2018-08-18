@@ -1,0 +1,48 @@
+---
+- name: configuring worker nodes 
+  hosts: workers
+  vars:
+      masterip: "192.168.0.105"
+      tempvar: ansible_default_ipv4.address
+  tasks:
+    - name: create the repo 
+      yum_repository: 
+        name: virt7-docker-common-release
+        description: docker-common-release.repo
+        baseurl: http://cbs.centos.org/repos/virt7-docker-common-release/x86_64/os/
+        gpgcheck: no
+
+    
+    - name: install the required packages
+      yum:  
+        name: "{{ item }}" 
+        state: present
+      with_items:
+        - ntp
+        - etcd
+        - kubernetes
+        - docker 
+
+    - name: create the kubernetes config in worker
+      template:
+        src: mytemplates/kworker-kube.j2
+        dest: /etc/etcd/etcd.conf
+        owner: root
+
+    - name: create the kubelet config file    
+      template:
+        src: mytemplates/worker-kubelet.j2
+        dest: /etc/kubernetes/kubelet
+        owner: root
+
+
+    - name: start the services in worker node
+      service:
+        name:  "{{ item }}"   
+        state: started
+      with_items:
+        - ntpd
+        - kube-proxy
+        - kubelet
+        - docker
+    
